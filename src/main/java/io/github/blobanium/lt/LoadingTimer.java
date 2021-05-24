@@ -4,11 +4,8 @@ import io.github.blobanium.lt.config.ConfigReader;
 import io.github.blobanium.lt.toast.ToastExecutor;
 import io.github.blobanium.lt.util.logging.TimeLogger;
 import io.github.blobanium.lt.util.math.MathUtil;
-
 import net.fabricmc.api.ModInitializer;
-
 import net.minecraft.client.MinecraftClient;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -23,10 +20,11 @@ public class LoadingTimer implements ModInitializer {
 	public static double finalResult = 0;
 	public static boolean timerDone = false;
 	public static final Logger LOGGER = LogManager.getLogger("Loading Timer");
-	public static int resV = 0;
-	public static int resH = 0;
 	public static boolean resizeError = false;
     public static boolean advanceLoopControl = true;
+	public static boolean hasResolutionChanged = false;
+	public static boolean isLoopActive = false;
+	private static double finalResultToast;
 
 	@Override
 	public void onInitialize() {
@@ -44,11 +42,11 @@ public class LoadingTimer implements ModInitializer {
     			isClientFullscreen = true;
     			isClientFullscreen2 = true;
     		}
-    		getDimensions();
+			isLoopActive=true;
             advanceloop((byte) 1);
     	}
     
-    	if(resV == MinecraftClient.getInstance().currentScreen.height && resH == MinecraftClient.getInstance().currentScreen.width){
+    	if(!hasResolutionChanged){
     		if(hasGameStarted == 1 && advanceLoopControl){
     			if(isClientFullscreen){
                     advanceloop((byte) 2);
@@ -70,7 +68,7 @@ public class LoadingTimer implements ModInitializer {
     			resizeError = true;
     			}
     		}
-    		getDimensions();
+    		hasResolutionChanged = false;
     	}
     }
 
@@ -83,19 +81,12 @@ public class LoadingTimer implements ModInitializer {
 			TimeLogger.loggerMessage(3, rawLoadingTime, "");
 		}
 		if(ConfigReader.rawLoadingToast){
-			double finalResultToast = MathUtil.roundValue(rawLoadingTime);
-			// Send A System toast Once its done loading
-			ToastExecutor.executeToast(finalResultToast, 1);
+			finalResultToast = MathUtil.roundValue(rawLoadingTime);
 		} else {
-			double finalResultToast = MathUtil.roundValue(finalResult);
-			ToastExecutor.executeToast(finalResultToast, 1);
+			finalResultToast = MathUtil.roundValue(finalResult);
 		}
+		ToastExecutor.executeToast("loading-timer.message_text", finalResultToast);
 		timerDone = true;
-	}
-
-	private static void getDimensions(){
-		resV = MinecraftClient.getInstance().currentScreen.height;
-		resH = MinecraftClient.getInstance().currentScreen.width;
 	}
 
 	private static void advanceloop(byte newHasGameStarted){
@@ -106,6 +97,7 @@ public class LoadingTimer implements ModInitializer {
     private static void loopEnd(){
         hasGameStarted = 3;
         lastMessage();
+		isLoopActive = false;
         advanceLoopControl = false;
     }
 
